@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { formService, FeedbackForm } from '@/services/formService';
@@ -24,10 +23,7 @@ const StudentDashboard: React.FC = () => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        // Get all forms
         const allForms = await formService.getAllForms();
-        
-        // Check which forms the student has already submitted
         const submissions = await formService.getStudentSubmissions(user.id);
         const submittedFormIds = submissions.map(sub => sub.form_id);
         
@@ -55,7 +51,6 @@ const StudentDashboard: React.FC = () => {
 
   const handleFormSubmitted = async () => {
     if (selectedFormId && user) {
-      // Update the submittedForms state
       setSubmittedForms(prev => [...prev, selectedFormId]);
       
       toast({
@@ -63,6 +58,8 @@ const StudentDashboard: React.FC = () => {
         description: 'Form submitted successfully. Thank you for your feedback!',
       });
     }
+    
+    return Promise.resolve();
   };
 
   const completed = forms.filter(form => submittedForms.includes(form.id));
@@ -122,7 +119,10 @@ const StudentDashboard: React.FC = () => {
                   key={form.id}
                   form={form}
                   status={submittedForms.includes(form.id) ? { id: '', form_id: form.id, student_id: user?.id || '', submitted_at: new Date().toISOString() } : undefined}
-                  onComplete={() => handleFillForm(form.id)}
+                  onComplete={() => {
+                    handleFillForm(form.id);
+                    return Promise.resolve();
+                  }}
                 />
               ))}
             </div>
@@ -158,7 +158,10 @@ const StudentDashboard: React.FC = () => {
                 <FormCard 
                   key={form.id}
                   form={form}
-                  onComplete={() => handleFillForm(form.id)}
+                  onComplete={() => {
+                    handleFillForm(form.id);
+                    return Promise.resolve();
+                  }}
                 />
               ))}
             </div>
