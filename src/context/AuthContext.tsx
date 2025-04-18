@@ -55,12 +55,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       async (event, session) => {
         setUser(session?.user ?? null);
         if (session?.user) {
-          const { data: profile } = await supabase
+          const { data: profileData } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single();
-          setProfile(profile);
+          
+          if (profileData) {
+            setProfile({
+              id: profileData.id,
+              user_role: profileData.user_role as UserRole,
+              full_name: profileData.full_name,
+              email: profileData.email,
+              department: profileData.department,
+              student_id: profileData.student_id,
+              position: profileData.position
+            });
+          }
         } else {
           setProfile(null);
         }
@@ -76,8 +87,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .select('*')
           .eq('id', session.user.id)
           .single()
-          .then(({ data }) => {
-            setProfile(data);
+          .then(({ data: profileData }) => {
+            if (profileData) {
+              setProfile({
+                id: profileData.id,
+                user_role: profileData.user_role as UserRole,
+                full_name: profileData.full_name,
+                email: profileData.email,
+                department: profileData.department,
+                student_id: profileData.student_id,
+                position: profileData.position
+              });
+            }
             setIsLoading(false);
           });
       } else {

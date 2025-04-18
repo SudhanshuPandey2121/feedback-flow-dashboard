@@ -6,11 +6,11 @@ import { Button } from '@/components/ui/button';
 import { LogOut, User } from 'lucide-react';
 
 const Header: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await signOut();
     navigate('/login');
   };
 
@@ -24,7 +24,7 @@ const Header: React.FC = () => {
         <div className="flex items-center space-x-2">
           <h1 className="text-xl font-bold">Department Feedback System</h1>
         </div>
-        {user && (
+        {user && profile && (
           <div className="flex items-center gap-4">
             <Button 
               variant="ghost" 
@@ -32,7 +32,7 @@ const Header: React.FC = () => {
               className="flex items-center gap-2"
             >
               <User size={18} />
-              <span className="hidden sm:inline">{user.name}</span>
+              <span className="hidden sm:inline">{profile.full_name}</span>
             </Button>
             <Button 
               variant="ghost"

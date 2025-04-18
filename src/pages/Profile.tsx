@@ -6,18 +6,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 
 const Profile: React.FC = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [stats, setStats] = useState({ total: 0, completed: 0 });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchStats = async () => {
-      if (!user) return;
+      if (!user || !profile) return;
       
       try {
         setIsLoading(true);
         
-        if (user.role === 'student') {
+        if (profile.user_role === 'student') {
           const stats = await formService.getStudentCompletionStats(user.id);
           setStats(stats);
         }
@@ -29,9 +29,9 @@ const Profile: React.FC = () => {
     };
 
     fetchStats();
-  }, [user]);
+  }, [user, profile]);
 
-  if (!user) {
+  if (!user || !profile) {
     return (
       <div className="container mx-auto py-8 px-4">
         <div className="text-center py-10">User not found</div>
@@ -52,46 +52,46 @@ const Profile: React.FC = () => {
             <div className="space-y-4">
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground">Full Name</h4>
-                <p className="text-base">{user.name}</p>
+                <p className="text-base">{profile.full_name}</p>
               </div>
               
               <Separator />
               
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground">Email</h4>
-                <p className="text-base">{user.email}</p>
+                <p className="text-base">{profile.email}</p>
               </div>
               
               <Separator />
               
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground">Department</h4>
-                <p className="text-base">{user.department}</p>
+                <p className="text-base">{profile.department}</p>
               </div>
               
               <Separator />
               
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground">Role</h4>
-                <p className="text-base capitalize">{user.role}</p>
+                <p className="text-base capitalize">{profile.user_role}</p>
               </div>
               
-              {user.role === 'student' && user.studentId && (
+              {profile.user_role === 'student' && profile.student_id && (
                 <>
                   <Separator />
                   <div>
                     <h4 className="text-sm font-medium text-muted-foreground">Student ID</h4>
-                    <p className="text-base">{user.studentId}</p>
+                    <p className="text-base">{profile.student_id}</p>
                   </div>
                 </>
               )}
               
-              {user.role === 'teacher' && user.position && (
+              {profile.user_role === 'teacher' && profile.position && (
                 <>
                   <Separator />
                   <div>
                     <h4 className="text-sm font-medium text-muted-foreground">Position</h4>
-                    <p className="text-base">{user.position}</p>
+                    <p className="text-base">{profile.position}</p>
                   </div>
                 </>
               )}
@@ -99,7 +99,7 @@ const Profile: React.FC = () => {
           </CardContent>
         </Card>
         
-        {user.role === 'student' && (
+        {profile.user_role === 'student' && (
           <Card>
             <CardHeader>
               <CardTitle>Form Completion</CardTitle>
