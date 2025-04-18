@@ -1,72 +1,123 @@
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, XCircle, Calendar, ExternalLink } from 'lucide-react';
-import { FeedbackForm, FormStatus } from '@/services/formService';
+import { FeedbackForm, FormSubmission } from '@/services/formService';
+import { Check, ExternalLink, Trash } from 'lucide-react';
+import { format, isPast } from 'date-fns';
+import { useAuth } from '@/context/AuthContext';
 
 interface FormCardProps {
   form: FeedbackForm;
-  status?: FormStatus;
-  onComplete?: (formId: string) => void;
+  status?: FormSubmission;
+  stats?: {
+    completed: number;
+    total: number;
+  };
+  onComplete?: (formId: string) => Promise<void>;
+  onDelete?: (formId: string) => void;
+  onViewResponses?: (formId: string) => void;
 }
 
-const FormCard: React.FC<FormCardProps> = ({ form, status, onComplete }) => {
-  const isCompleted = status?.completed || false;
-  const formattedDate = new Date(form.dueDate).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
-
-  const handleComplete = () => {
+const FormCard: React.FC<FormCardProps> = ({ 
+  form, 
+  status, 
+  stats,
+  onComplete,
+  onDelete,
+  onViewResponses
+}) => {
+  const { profile } = useAuth();
+  const isTeacher = profile?.user_role === 'teacher';
+  const isStudent = profile?.user_role === 'student';
+  const isCompleted = !!status?.submitted_at;
+  const isDueDate = form.due_date ? new Date(form.due_date) : null;
+  const isExpired = isDueDate ? isPast(isDueDate) : false;
+  
+  const handleComplete = async () => {
     if (onComplete) {
-      onComplete(form.id);
+      await onComplete(form.id);
     }
   };
 
-  const handleOpenForm = () => {
-    window.open(form.url, '_blank');
-  };
-
   return (
-    <Card className={`transition-all duration-300 ${isCompleted ? 'border-l-4 border-l-success' : 'border-l-4 border-l-danger'}`}>
-      <CardHeader>
-        <div className="flex justify-between items-start">
-          <div>
-            <CardTitle>{form.title}</CardTitle>
-            <CardDescription>{form.description}</CardDescription>
+    <Card className={`overflow-hidden ${isExpired ? 'border-muted' : ''}`}>
+      <CardHeader className="pb-3">
+        <CardTitle>{form.title}</CardTitle>
+        {isDueDate && (
+          <div className={`text-sm ${isExpired ? 'text-destructive' : 'text-muted-foreground'}`}>
+            Due: {format(isDueDate, 'PPP')}
+            {isExpired && <span className="ml-2">(Expired)</span>}
           </div>
-          <div>
-            {isCompleted ? (
-              <CheckCircle className="text-success" size={24} />
-            ) : (
-              <XCircle className="text-danger" size={24} />
-            )}
-          </div>
-        </div>
+        )}
       </CardHeader>
       <CardContent>
-        <div className="flex items-center text-sm text-muted-foreground">
-          <Calendar size={16} className="mr-2" />
-          <span>Due: {formattedDate}</span>
-        </div>
-        {status?.completedAt && (
-          <div className="mt-2 text-sm text-success">
-            Completed on: {new Date(status.completedAt).toLocaleDateString()}
+        {form.description && <p className="text-sm text-muted-foreground mb-4">{form.description}</p>}
+        
+        {isTeacher && stats && (
+          <div className="bg-muted p-3 rounded-md">
+            <div className="flex justify-between mb-2">
+              <span className="text-sm">Student Completion</span>
+              <span className="text-sm font-medium">
+                {stats.completed} / {stats.total} students
+              </span>
+            </div>
+            <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-primary" 
+                style={{ width: `${stats.total > 0 ? (stats.completed / stats.total * 100) : 0}%` }}
+              />
+            </div>
           </div>
         )}
       </CardContent>
-      <CardFooter className="flex justify-between">
-        <Button variant="outline" onClick={handleOpenForm}>
-          <ExternalLink size={16} className="mr-2" />
-          Open Form
-        </Button>
-        {!isCompleted && onComplete && (
-          <Button onClick={handleComplete}>
-            Mark as Complete
-          </Button>
-        )}
+      
+      <CardFooter className="border-t bg-muted/50 px-6 py-3">
+        <div className="flex justify-between w-full">
+          {isStudent && (
+            <>
+              {isCompleted ? (
+                <div className="flex items-center text-success gap-1">
+                  <Check size={16} />
+                  <span className="text-sm">Completed</span>
+                </div>
+              ) : (
+                <Button 
+                  onClick={handleComplete}
+                  disabled={isExpired}
+                  size="sm"
+                >
+                  Fill Form
+                </Button>
+              )}
+            </>
+          )}
+          
+          {isTeacher && (
+            <div className="flex gap-2">
+              {onViewResponses && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => onViewResponses(form.id)}
+                >
+                  <ExternalLink size={16} className="mr-1" />
+                  View Responses
+                </Button>
+              )}
+              
+              {onDelete && (
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={() => onDelete(form.id)}
+                >
+                  <Trash size={16} />
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
       </CardFooter>
     </Card>
   );

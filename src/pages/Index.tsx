@@ -7,7 +7,15 @@ import StudentDashboard from '@/pages/StudentDashboard';
 import TeacherDashboard from '@/pages/TeacherDashboard';
 
 const Index: React.FC = () => {
-  const { user } = useAuth();
+  const { user, profile, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
   if (!user) {
     return <Navigate to="/login" />;
@@ -17,7 +25,7 @@ const Index: React.FC = () => {
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
       <main className="flex-1">
-        {user.role === 'student' ? <StudentDashboard /> : <TeacherDashboard />}
+        {profile?.user_role === 'student' ? <StudentDashboard /> : <TeacherDashboard />}
       </main>
     </div>
   );

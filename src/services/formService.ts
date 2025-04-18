@@ -1,132 +1,254 @@
 
-// This is a mock service that would be replaced with actual API calls
+import { supabase } from '@/integrations/supabase/client';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface FeedbackForm {
   id: string;
   title: string;
-  description: string;
-  url: string;
-  dueDate: string;
-  createdBy: string;
+  description: string | null;
+  created_by: string;
+  due_date: string;
+  created_at: string;
 }
 
-export interface FormStatus {
-  formId: string;
-  userId: string;
-  completed: boolean;
-  completedAt?: string;
+export interface FormQuestion {
+  id: string;
+  form_id: string;
+  question_text: string;
+  question_order: number;
+  created_at?: string;
 }
 
-// Mock data
-const mockForms: FeedbackForm[] = [
-  {
-    id: 'f1',
-    title: 'Course Content Feedback',
-    description: 'Please provide feedback on the course content and materials',
-    url: 'https://forms.google.com/course-content',
-    dueDate: '2025-05-01',
-    createdBy: 't1'
-  },
-  {
-    id: 'f2',
-    title: 'Teaching Quality Assessment',
-    description: 'Evaluate the teaching quality and methodology',
-    url: 'https://forms.google.com/teaching-quality',
-    dueDate: '2025-05-10',
-    createdBy: 't1'
-  },
-  {
-    id: 'f3',
-    title: 'Facilities Feedback',
-    description: 'Provide feedback on department facilities',
-    url: 'https://forms.google.com/facilities',
-    dueDate: '2025-05-15',
-    createdBy: 't1'
-  },
-  {
-    id: 'f4',
-    title: 'Extra-Curricular Activities Review',
-    description: 'Share your thoughts on extra-curricular activities',
-    url: 'https://forms.google.com/extra-curricular',
-    dueDate: '2025-05-20',
-    createdBy: 't1'
-  }
-];
+export interface FormSubmission {
+  id: string;
+  form_id: string;
+  student_id: string;
+  submitted_at: string;
+}
 
-const mockFormStatuses: FormStatus[] = [
-  { formId: 'f1', userId: 's1', completed: true, completedAt: '2025-04-15T10:30:00' },
-  { formId: 'f2', userId: 's1', completed: false },
-  { formId: 'f3', userId: 's1', completed: true, completedAt: '2025-04-16T14:20:00' },
-  { formId: 'f4', userId: 's1', completed: false }
-];
+export interface QuestionResponse {
+  id: string;
+  submission_id: string;
+  question_id: string;
+  rating: number;
+  created_at?: string;
+}
 
-// Methods to interact with the mock data
+export interface StudentCount {
+  total: number;
+  completed: number;
+}
+
+// Methods to interact with the database
 export const formService = {
   // Teacher methods
   getAllForms: async (): Promise<FeedbackForm[]> => {
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
-    return [...mockForms];
+    const { data, error } = await supabase
+      .from('forms')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return data || [];
   },
   
-  getFormById: async (id: string): Promise<FeedbackForm | undefined> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return mockForms.find(form => form.id === id);
+  getFormById: async (id: string): Promise<FeedbackForm | null> => {
+    const { data, error } = await supabase
+      .from('forms')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) {
+      if (error.code === 'PGRST116') return null; // Not found
+      throw error;
+    }
+    return data;
   },
   
-  createForm: async (form: Omit<FeedbackForm, 'id'>): Promise<FeedbackForm> => {
-    await new Promise(resolve => setTimeout(resolve, 800));
-    const newForm = { ...form, id: `f${mockForms.length + 1}` };
-    mockForms.push(newForm);
-    return newForm;
+  createForm: async (form: Omit<FeedbackForm, 'id' | 'created_at'>): Promise<FeedbackForm> => {
+    const { data, error } = await supabase
+      .from('forms')
+      .insert(form)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+  
+  updateForm: async (id: string, updates: Partial<Omit<FeedbackForm, 'id' | 'created_at' | 'created_by'>>): Promise<FeedbackForm> => {
+    const { data, error } = await supabase
+      .from('forms')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+  
+  deleteForm: async (id: string): Promise<void> => {
+    const { error } = await supabase
+      .from('forms')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+  
+  // Question methods
+  getFormQuestions: async (formId: string): Promise<FormQuestion[]> => {
+    const { data, error } = await supabase
+      .from('form_questions')
+      .select('*')
+      .eq('form_id', formId)
+      .order('question_order', { ascending: true });
+    
+    if (error) throw error;
+    return data || [];
+  },
+  
+  createFormQuestions: async (questions: Omit<FormQuestion, 'id' | 'created_at'>[]): Promise<FormQuestion[]> => {
+    const { data, error } = await supabase
+      .from('form_questions')
+      .insert(questions)
+      .select();
+    
+    if (error) throw error;
+    return data || [];
+  },
+  
+  updateFormQuestion: async (id: string, updates: Partial<Omit<FormQuestion, 'id' | 'created_at'>>): Promise<FormQuestion> => {
+    const { data, error } = await supabase
+      .from('form_questions')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+  
+  deleteFormQuestion: async (id: string): Promise<void> => {
+    const { error } = await supabase
+      .from('form_questions')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
   },
   
   // Student methods
-  getFormStatusesByUserId: async (userId: string): Promise<Array<FormStatus & { form: FeedbackForm }>> => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return mockFormStatuses
-      .filter(status => status.userId === userId)
-      .map(status => {
-        const form = mockForms.find(form => form.id === status.formId)!;
-        return { ...status, form };
-      });
+  getFormSubmissions: async (formId: string): Promise<FormSubmission[]> => {
+    const { data, error } = await supabase
+      .from('form_submissions')
+      .select('*')
+      .eq('form_id', formId);
+    
+    if (error) throw error;
+    return data || [];
   },
   
-  markFormAsCompleted: async (formId: string, userId: string): Promise<FormStatus> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
+  getStudentSubmissions: async (studentId: string): Promise<FormSubmission[]> => {
+    const { data, error } = await supabase
+      .from('form_submissions')
+      .select('*')
+      .eq('student_id', studentId);
     
-    const statusIndex = mockFormStatuses.findIndex(
-      status => status.formId === formId && status.userId === userId
-    );
+    if (error) throw error;
+    return data || [];
+  },
+  
+  hasStudentSubmitted: async (formId: string, studentId: string): Promise<boolean> => {
+    const { data, error } = await supabase
+      .from('form_submissions')
+      .select('id')
+      .eq('form_id', formId)
+      .eq('student_id', studentId)
+      .maybeSingle();
     
-    if (statusIndex >= 0) {
-      mockFormStatuses[statusIndex].completed = true;
-      mockFormStatuses[statusIndex].completedAt = new Date().toISOString();
-      return mockFormStatuses[statusIndex];
-    }
+    if (error) throw error;
+    return !!data;
+  },
+  
+  submitForm: async (formId: string, studentId: string, responses: { questionId: string, rating: number }[]): Promise<void> => {
+    // Create form submission
+    const { data: submissionData, error: submissionError } = await supabase
+      .from('form_submissions')
+      .insert({
+        form_id: formId,
+        student_id: studentId
+      })
+      .select()
+      .single();
     
-    const newStatus = {
-      formId,
-      userId,
-      completed: true,
-      completedAt: new Date().toISOString()
-    };
+    if (submissionError) throw submissionError;
     
-    mockFormStatuses.push(newStatus);
-    return newStatus;
+    // Create question responses
+    const questionResponses = responses.map(r => ({
+      submission_id: submissionData.id,
+      question_id: r.questionId,
+      rating: r.rating
+    }));
+    
+    const { error: responsesError } = await supabase
+      .from('question_responses')
+      .insert(questionResponses);
+    
+    if (responsesError) throw responsesError;
   },
   
   // Statistics for teachers
-  getFormCompletionStats: async (formId: string): Promise<{ total: number, completed: number }> => {
-    await new Promise(resolve => setTimeout(resolve, 400));
-    const statuses = mockFormStatuses.filter(status => status.formId === formId);
-    const completed = statuses.filter(status => status.completed).length;
-    return { total: statuses.length, completed };
+  getFormCompletionStats: async (formId: string): Promise<StudentCount> => {
+    // Get total number of students
+    const { count: totalCount, error: totalError } = await supabase
+      .from('profiles')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_role', 'student');
+    
+    if (totalError) throw totalError;
+    
+    // Get number of submissions for this form
+    const { count: completedCount, error: completedError } = await supabase
+      .from('form_submissions')
+      .select('id', { count: 'exact', head: true })
+      .eq('form_id', formId);
+    
+    if (completedError) throw completedError;
+    
+    return {
+      total: totalCount || 0,
+      completed: completedCount || 0
+    };
+  },
+
+  // Get response analytics
+  getFormResponses: async (formId: string): Promise<any[]> => {
+    const { data, error } = await supabase
+      .from('question_responses')
+      .select(`
+        id,
+        rating,
+        form_questions(id, question_text),
+        form_submissions(id, student_id)
+      `)
+      .eq('form_submissions.form_id', formId);
+    
+    if (error) throw error;
+    return data || [];
   },
   
-  getStudentCompletionStats: async (userId: string): Promise<{ total: number, completed: number }> => {
-    await new Promise(resolve => setTimeout(resolve, 400));
-    const statuses = mockFormStatuses.filter(status => status.userId === userId);
-    const completed = statuses.filter(status => status.completed).length;
-    return { total: statuses.length, completed };
+  // Get all students
+  getAllStudents: async (): Promise<any[]> => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_role', 'student');
+    
+    if (error) throw error;
+    return data || [];
   }
 };
