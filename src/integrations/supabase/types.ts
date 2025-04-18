@@ -9,7 +9,166 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      form_questions: {
+        Row: {
+          created_at: string
+          form_id: string
+          id: string
+          question_order: number
+          question_text: string
+        }
+        Insert: {
+          created_at?: string
+          form_id: string
+          id?: string
+          question_order: number
+          question_text: string
+        }
+        Update: {
+          created_at?: string
+          form_id?: string
+          id?: string
+          question_order?: number
+          question_text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_questions_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_submissions: {
+        Row: {
+          form_id: string
+          id: string
+          student_id: string
+          submitted_at: string
+        }
+        Insert: {
+          form_id: string
+          id?: string
+          student_id: string
+          submitted_at?: string
+        }
+        Update: {
+          form_id?: string
+          id?: string
+          student_id?: string
+          submitted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_submissions_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forms: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          due_date: string
+          id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          due_date: string
+          id?: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          due_date?: string
+          id?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          department: string
+          email: string
+          full_name: string
+          id: string
+          position: string | null
+          student_id: string | null
+          user_role: string
+        }
+        Insert: {
+          created_at?: string
+          department: string
+          email: string
+          full_name: string
+          id: string
+          position?: string | null
+          student_id?: string | null
+          user_role: string
+        }
+        Update: {
+          created_at?: string
+          department?: string
+          email?: string
+          full_name?: string
+          id?: string
+          position?: string | null
+          student_id?: string | null
+          user_role?: string
+        }
+        Relationships: []
+      }
+      question_responses: {
+        Row: {
+          created_at: string
+          id: string
+          question_id: string
+          rating: number
+          submission_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          question_id: string
+          rating: number
+          submission_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          question_id?: string
+          rating?: number
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_responses_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "form_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_responses_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "form_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

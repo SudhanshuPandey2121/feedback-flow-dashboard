@@ -1,23 +1,37 @@
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { User } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 
 export type UserRole = 'student' | 'teacher';
 
-export interface User {
+export interface Profile {
   id: string;
-  name: string;
+  user_role: UserRole;
+  full_name: string;
   email: string;
-  role: UserRole;
   department: string;
-  studentId?: string;  // Only for students
-  position?: string;   // Only for teachers
+  student_id?: string;
+  position?: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  profile: Profile | null;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (data: SignUpData) => Promise<void>;
+  signOut: () => Promise<void>;
   isLoading: boolean;
+}
+
+interface SignUpData {
+  email: string;
+  password: string;
+  full_name: string;
+  department: string;
+  user_role: UserRole;
+  student_id?: string;
+  position?: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,56 +44,79 @@ export const useAuth = () => {
   return context;
 };
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const login = async (email: string, password: string) => {
-    setIsLoading(true);
-    try {
-      // In a real app, this would be an API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock users for demo
-      if (email === 'teacher@example.com' && password === 'password') {
-        setUser({
-          id: 't1',
-          name: 'Dr. Smith',
-          email: 'teacher@example.com',
-          role: 'teacher',
-          department: 'Computer Science',
-          position: 'Associate Professor'
-        });
-      } else if (email === 'student@example.com' && password === 'password') {
-        setUser({
-          id: 's1',
-          name: 'John Doe',
-          email: 'student@example.com',
-          role: 'student',
-          department: 'Computer Science',
-          studentId: 'CS2023001'
-        });
-      } else {
-        throw new Error('Invalid credentials');
+  useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+          setProfile(profile);
+        } else {
+          setProfile(null);
+        }
       }
-    } catch (error) {
-      console.error('Login failed:', error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
+    );
+
+    // Check current session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data }) => {
+            setProfile(data);
+            setIsLoading(false);
+          });
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
   };
 
-  const logout = () => {
-    setUser(null);
+  const signUp = async (data: SignUpData) => {
+    const { error } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
+      options: {
+        data: {
+          user_role: data.user_role,
+          full_name: data.full_name,
+          department: data.department,
+          student_id: data.student_id,
+          position: data.position,
+        },
+      },
+    });
+    if (error) throw error;
+  };
+
+  const signOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, profile, signIn, signUp, signOut, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
