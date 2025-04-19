@@ -87,9 +87,11 @@ const FormResponseDialog: React.FC<FormResponseDialogProps> = ({
     
     // Calculate counts and sum
     responses.forEach(response => {
-      const questionId = response.form_questions.id;
-      if (questionAverages[questionId]) {
-        questionAverages[questionId].counts[response.rating]++;
+      if (response?.form_questions?.id) {
+        const questionId = response.form_questions.id;
+        if (questionAverages[questionId] && response.rating) {
+          questionAverages[questionId].counts[response.rating]++;
+        }
       }
     });
     
@@ -173,7 +175,9 @@ const FormResponseDialog: React.FC<FormResponseDialogProps> = ({
   };
 
   const renderIndividualTab = () => {
-    const completedStudentIds = [...new Set(responses.map(r => r.form_submissions.student_id))];
+    const completedStudentIds = [...new Set(responses
+      .filter(r => r?.form_submissions?.student_id)
+      .map(r => r.form_submissions.student_id))];
     
     const getStudentName = (id: string) => {
       const student = students.find(s => s.id === id);
@@ -198,8 +202,9 @@ const FormResponseDialog: React.FC<FormResponseDialogProps> = ({
           <TableBody>
             {completedStudentIds.map(studentId => {
               const student = students.find(s => s.id === studentId);
-              const submission = responses.find(r => r.form_submissions.student_id === studentId);
-              const submissionDate = submission ? new Date(submission.form_submissions.submitted_at) : null;
+              const submission = responses.find(r => r?.form_submissions?.student_id === studentId);
+              const submissionDate = submission?.form_submissions?.submitted_at ? 
+                new Date(submission.form_submissions.submitted_at) : null;
               
               return (
                 <TableRow key={studentId}>
