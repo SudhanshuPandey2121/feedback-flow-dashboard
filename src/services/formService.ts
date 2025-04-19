@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -8,7 +9,6 @@ export interface FeedbackForm {
   created_by: string;
   due_date: string;
   created_at: string;
-  url?: string; // Make url optional for form creation
 }
 
 export interface FormQuestion {
@@ -216,29 +216,6 @@ export const formService = {
       .from('form_submissions')
       .select('id', { count: 'exact', head: true })
       .eq('form_id', formId);
-    
-    if (completedError) throw completedError;
-    
-    return {
-      total: totalCount || 0,
-      completed: completedCount || 0
-    };
-  },
-  
-  // Get student completion stats - add this missing method
-  getStudentCompletionStats: async (studentId: string): Promise<StudentCount> => {
-    // Get total number of forms
-    const { count: totalCount, error: totalError } = await supabase
-      .from('forms')
-      .select('id', { count: 'exact', head: true });
-    
-    if (totalError) throw totalError;
-    
-    // Get number of forms submitted by this student
-    const { count: completedCount, error: completedError } = await supabase
-      .from('form_submissions')
-      .select('id', { count: 'exact', head: true })
-      .eq('student_id', studentId);
     
     if (completedError) throw completedError;
     

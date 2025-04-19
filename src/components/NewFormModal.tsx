@@ -12,7 +12,7 @@ import { useToast } from '@/components/ui/use-toast';
 interface NewFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (form: Omit<FeedbackForm, 'id' | 'created_at'>) => Promise<void>;
+  onSubmit: (form: Omit<FeedbackForm, 'id'>) => Promise<void>;
 }
 
 const NewFormModal: React.FC<NewFormModalProps> = ({ isOpen, onClose, onSubmit }) => {
@@ -27,7 +27,7 @@ const NewFormModal: React.FC<NewFormModalProps> = ({ isOpen, onClose, onSubmit }
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!title || !dueDate) {
+    if (!title || !url || !dueDate) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -51,9 +51,9 @@ const NewFormModal: React.FC<NewFormModalProps> = ({ isOpen, onClose, onSubmit }
       await onSubmit({
         title,
         description,
-        due_date: dueDate,
-        created_by: user.id,
-        url // This is now properly typed in the FeedbackForm interface
+        url,
+        dueDate,
+        createdBy: user.id,
       });
       
       setTitle('');
@@ -108,12 +108,13 @@ const NewFormModal: React.FC<NewFormModalProps> = ({ isOpen, onClose, onSubmit }
           </div>
           
           <div className="grid gap-2">
-            <Label htmlFor="url">Google Form URL</Label>
+            <Label htmlFor="url">Google Form URL *</Label>
             <Input
               id="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://forms.google.com/... (optional)"
+              placeholder="https://forms.google.com/..."
+              required
             />
           </div>
           
