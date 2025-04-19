@@ -1,4 +1,5 @@
 
+/// <reference lib="webworker" />
 import { precacheAndRoute } from 'workbox-precaching';
 
 declare let self: ServiceWorkerGlobalScope;

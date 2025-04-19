@@ -14,6 +14,7 @@ if ('serviceWorker' in navigator) {
       })
       .catch((error) => {
         console.error('ServiceWorker registration failed:', error);
+        // Continue loading the app even if service worker registration fails
       });
   });
 }
