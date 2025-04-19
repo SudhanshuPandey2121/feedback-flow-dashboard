@@ -28,8 +28,8 @@ const StudentDashboard: React.FC = () => {
         const submissions = await formService.getStudentSubmissions(user.id);
         const submittedFormIds = submissions.map(sub => sub.form_id);
         
-        setForms(allForms);
-        setSubmittedForms(submittedFormIds);
+        setForms(allForms || []);
+        setSubmittedForms(submittedFormIds || []);
       } catch (error) {
         console.error('Failed to fetch forms:', error);
         toast({
@@ -48,6 +48,7 @@ const StudentDashboard: React.FC = () => {
   const handleFillForm = (formId: string) => {
     setSelectedFormId(formId);
     setIsFormDialogOpen(true);
+    return Promise.resolve();
   };
 
   const handleFormSubmitted = async () => {
@@ -121,8 +122,7 @@ const StudentDashboard: React.FC = () => {
                   form={form}
                   status={submittedForms.includes(form.id) ? { id: '', form_id: form.id, student_id: user?.id || '', submitted_at: new Date().toISOString() } : undefined}
                   onComplete={() => {
-                    handleFillForm(form.id);
-                    return Promise.resolve();
+                    return handleFillForm(form.id);
                   }}
                 />
               ))}
@@ -160,8 +160,7 @@ const StudentDashboard: React.FC = () => {
                   key={form.id}
                   form={form}
                   onComplete={() => {
-                    handleFillForm(form.id);
-                    return Promise.resolve();
+                    return handleFillForm(form.id);
                   }}
                 />
               ))}

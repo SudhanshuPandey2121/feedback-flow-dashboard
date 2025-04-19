@@ -14,6 +14,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import { format } from 'date-fns';
 
 interface FormResponseDialogProps {
   isOpen: boolean;
@@ -46,10 +47,10 @@ const FormResponseDialog: React.FC<FormResponseDialogProps> = ({
         const studentsData = await formService.getAllStudents();
         
         setForm(formData || null);
-        setQuestions(questionsData);
-        setResponses(responsesData);
-        setStats(statsData);
-        setStudents(studentsData);
+        setQuestions(questionsData || []);
+        setResponses(responsesData || []);
+        setStats(statsData || { total: 0, completed: 0 });
+        setStudents(studentsData || []);
       } catch (error) {
         console.error('Error fetching form data:', error);
         toast({
@@ -149,27 +150,33 @@ const FormResponseDialog: React.FC<FormResponseDialogProps> = ({
           </div>
         </div>
         
-        {averageRatings.map((question) => (
-          <div key={question.questionId} className="border rounded-md overflow-hidden">
-            <div className="p-4 border-b">
-              <h3 className="font-medium">{question.questionText}</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Average Rating: <span className="font-medium">{question.averageRating.toFixed(2)}</span>
-              </p>
+        {averageRatings.length > 0 ? (
+          averageRatings.map((question) => (
+            <div key={question.questionId} className="border rounded-md overflow-hidden">
+              <div className="p-4 border-b">
+                <h3 className="font-medium">{question.questionText}</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Average Rating: <span className="font-medium">{question.averageRating.toFixed(2)}</span>
+                </p>
+              </div>
+              <div className="p-4 h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={getChartData(question.questionId)}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="rating" />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="#3b82f6" name="Number of Responses" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
-            <div className="p-4 h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={getChartData(question.questionId)}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="rating" />
-                  <YAxis allowDecimals={false} />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#3b82f6" name="Number of Responses" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+          ))
+        ) : (
+          <div className="text-center py-8 bg-muted rounded-lg">
+            <p className="text-muted-foreground">No responses received yet.</p>
           </div>
-        ))}
+        )}
       </div>
     );
   };
@@ -190,35 +197,72 @@ const FormResponseDialog: React.FC<FormResponseDialogProps> = ({
           Showing {completedStudentIds.length} student submissions out of {stats.total} students.
         </div>
         
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Student Name</TableHead>
-              <TableHead>Student ID</TableHead>
-              <TableHead>Department</TableHead>
-              <TableHead>Submission Date</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {completedStudentIds.map(studentId => {
-              const student = students.find(s => s.id === studentId);
-              const submission = responses.find(r => r?.form_submissions?.student_id === studentId);
-              const submissionDate = submission?.form_submissions?.submitted_at ? 
-                new Date(submission.form_submissions.submitted_at) : null;
-              
-              return (
-                <TableRow key={studentId}>
-                  <TableCell>{student?.full_name || 'Unknown'}</TableCell>
-                  <TableCell>{student?.student_id || 'N/A'}</TableCell>
-                  <TableCell>{student?.department || 'N/A'}</TableCell>
-                  <TableCell>
-                    {submissionDate ? submissionDate.toLocaleDateString() : 'N/A'}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+        {completedStudentIds.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Student Name</TableHead>
+                <TableHead>Student ID</TableHead>
+                <TableHead>Department</TableHead>
+                <TableHead>Submission Date</TableHead>
+                <TableHead>View Details</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {completedStudentIds.map(studentId => {
+                const student = students.find(s => s.id === studentId);
+                const submission = responses.find(r => r?.form_submissions?.student_id === studentId);
+                const submissionDate = submission?.form_submissions?.submitted_at ? 
+                  new Date(submission.form_submissions.submitted_at) : null;
+                
+                return (
+                  <TableRow key={studentId}>
+                    <TableCell>{student?.full_name || 'Unknown'}</TableCell>
+                    <TableCell>{student?.student_id || 'N/A'}</TableCell>
+                    <TableCell>{student?.department || 'N/A'}</TableCell>
+                    <TableCell>
+                      {submissionDate ? format(submissionDate, 'PPP') : 'N/A'}
+                    </TableCell>
+                    <TableCell>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => {
+                          const studentResponses = responses
+                            .filter(r => r?.form_submissions?.student_id === studentId)
+                            .map(r => ({
+                              questionText: r?.form_questions?.question_text || 'Unknown Question',
+                              rating: r?.rating || 0
+                            }));
+                            
+                          toast({
+                            title: `Responses from ${getStudentName(studentId)}`,
+                            description: (
+                              <div className="mt-2 space-y-1">
+                                {studentResponses.map((resp, idx) => (
+                                  <div key={idx} className="text-sm">
+                                    <span className="font-medium">{resp.questionText}:</span> {resp.rating}/5
+                                  </div>
+                                ))}
+                              </div>
+                            ),
+                            duration: 5000
+                          });
+                        }}
+                      >
+                        View Ratings
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        ) : (
+          <div className="text-center py-8 bg-muted rounded-lg">
+            <p className="text-muted-foreground">No student submissions received yet.</p>
+          </div>
+        )}
       </div>
     );
   };

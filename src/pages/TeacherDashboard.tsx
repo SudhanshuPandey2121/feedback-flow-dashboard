@@ -108,7 +108,18 @@ const TeacherDashboard: React.FC = () => {
 
   const handleDeleteForm = async (formId: string) => {
     try {
+      setIsLoading(true);
+      // First delete all form questions
+      const questions = await formService.getFormQuestions(formId);
+      
+      for (const question of questions) {
+        await formService.deleteFormQuestion(question.id);
+      }
+      
+      // Then delete the form itself
       await formService.deleteForm(formId);
+      
+      // Update the state
       setForms(forms.filter(form => form.id !== formId));
       
       toast({
@@ -122,9 +133,10 @@ const TeacherDashboard: React.FC = () => {
         description: 'Failed to delete form.',
         variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
+      setDeleteFormId(null);
     }
-    
-    setDeleteFormId(null);
   };
 
   const handleViewResponses = (formId: string) => {
